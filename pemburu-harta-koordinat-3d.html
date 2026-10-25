@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pemburu Harta Koordinat 3D</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap');
+:root{--gold:#ffd15b;--navy:#102743;--cream:#fff5d8;--mint:#80f0d1;--coral:#ff806b}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Nunito,system-ui,sans-serif;background:#071a30;color:white}
+#game{position:fixed;inset:0;background:#65bce8}canvas{display:block;width:100%;height:100%;outline:none}
+#vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#061a343f,transparent 24%,transparent 70%,#061a3459)}
+.top{position:absolute;top:0;left:0;right:0;padding:16px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;pointer-events:none}
+.logo{display:flex;gap:10px;align-items:center;text-shadow:0 3px 0 #17344d;font-weight:1000;letter-spacing:.5px;font-size:clamp(15px,2vw,23px)}
+.logoIcon{display:grid;place-items:center;width:48px;height:48px;border:3px solid #fff5d6;border-radius:15px;background:linear-gradient(#ffe27c,#ffb72f);box-shadow:0 5px 0 #9d642d;font-size:25px;text-shadow:none}
+.logo small{display:block;font-size:10px;letter-spacing:2px;color:#fff3c7}
+.stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.stat{background:#102d4be8;border:2px solid #fff3d4;border-radius:14px;padding:8px 12px;box-shadow:0 4px 0 #071a30;font-size:13px;font-weight:900;white-space:nowrap}
+#progressOuter{position:absolute;top:78px;left:22px;right:22px;height:8px;background:#0a294c99;border:1px solid #ffffff80;border-radius:10px;overflow:hidden}
+#progress{height:100%;width:0;background:linear-gradient(90deg,#7df0c6,#ffdc67);transition:width .3s}
+#mission{position:absolute;left:22px;top:103px;width:min(330px,calc(100vw - 44px));background:#102d4be8;border:2px solid #fff0c7;border-radius:17px;padding:13px 16px;box-shadow:0 6px 0 #061a3066;pointer-events:none}
+.eyebrow{font-size:10px;letter-spacing:1.6px;color:#ffe18a;font-weight:1000}
+#missionTitle{font-size:19px;font-weight:1000;margin:3px 0 4px}
+#missionText{font-size:12px;line-height:1.4;color:#dbeaf5}
+#prompt{position:absolute;left:50%;bottom:22%;transform:translateX(-50%);background:#102743ed;border:2px solid #ffe9a5;border-radius:14px;padding:11px 17px;box-shadow:0 5px 0 #061a30;font-weight:1000;font-size:14px;display:none;text-align:center;white-space:nowrap}
+kbd{display:inline-grid;place-items:center;min-width:24px;height:24px;border-radius:6px;background:#ffe18a;color:#18344f;padding:0 6px;margin:0 3px;box-shadow:0 2px 0 #a66d2b;font-weight:1000}
+#controls{position:absolute;left:22px;bottom:20px;background:#102d4bd9;border:1px solid #ffffff7a;border-radius:15px;padding:11px 14px;font-size:11px;line-height:1.8;color:#e7f4fb;pointer-events:none}
+#controls b{color:#ffe18a}
+#toast{position:absolute;top:25%;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:14px;background:#0e2d49;border:2px solid #ffdc7a;font-weight:1000;box-shadow:0 5px 0 #061a30;display:none;text-align:center}
+#modal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:16px;background:#06182bc2;backdrop-filter:blur(7px);z-index:5}
+.card{width:min(610px,100%);max-height:92vh;overflow:auto;background:linear-gradient(145deg,#fff8df,#ffe9ae);color:#19344f;border:4px solid white;border-radius:25px;padding:clamp(18px,4vw,30px);box-shadow:0 11px 0 #06182b;text-align:left}
+.card .tag{font-size:11px;letter-spacing:1.5px;font-weight:1000;color:#b66b25}
+.card h2{font-size:clamp(23px,4vw,32px);line-height:1.1;margin:7px 0}
+.card .story{font-size:14px;line-height:1.6;color:#42586a;margin:10px 0 16px}
+.question{background:white;border:2px solid #f1d9a0;border-radius:15px;padding:15px}
+.question p{font-weight:1000;font-size:16px;line-height:1.45;margin:7px 0 13px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.answer{border:2px solid #b9d9d8;background:#eaf8f4;color:#193c56;border-radius:12px;padding:12px 10px;font-weight:900;text-align:left;transition:.15s}
+.answer:hover{transform:translateY(-2px);background:#d7f5eb}
+.answer.good{background:#c7f5d0;border-color:#4bbf70}.answer.bad{background:#ffe0d8;border-color:#f07d68}
+#feedback{font-weight:900;font-size:13px;line-height:1.5;min-height:20px;margin-top:10px}
+.actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:15px}
+.btn{border:3px solid white;border-radius:13px;padding:11px 17px;background:linear-gradient(#ffe37e,#ffb82f);color:#563b14;box-shadow:0 4px 0 #a66d2c;font-weight:1000;cursor:pointer}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #a66d2c}
+.btn.secondary{background:#d8e9ee;color:#19344f;box-shadow:0 4px 0 #7899a4}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+#intro{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;padding:18px;background:linear-gradient(#09203b62,#071a30a8)}
+.introCard{width:min(720px,100%);text-align:center;background:linear-gradient(145deg,#fff9e5,#ffe4a0);border:5px solid white;border-radius:29px;padding:clamp(20px,4vw,38px);color:#19344f;box-shadow:0 12px 0 #06182b}
+.heroIcon{font-size:68px;filter:drop-shadow(0 5px 0 #bc792c)}
+.introCard h1{font-size:clamp(32px,6vw,54px);line-height:.98;margin:8px 0;color:#173957;text-shadow:0 3px 0 #ffcc50}
+.introCard p{line-height:1.6;color:#40576b;margin:13px auto;max-width:570px}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.chips span{background:#fff;border:2px solid #ead8a6;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:1000}
+#ending{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;padding:18px;background:#06182bd9;backdrop-filter:blur(6px)}
+.endCard{width:min(540px,100%);padding:28px;background:#fff4cb;border:5px solid white;border-radius:26px;color:#19344f;text-align:center;box-shadow:0 10px 0 #06182b}
+.endCard .chest{font-size:85px;animation:float 1.8s infinite ease-in-out}
+.endCard h2{font-size:32px;margin:5px 0;color:#85531b}
+.endCard p{line-height:1.6}
+@keyframes float{50%{transform:translateY(-8px) rotate(-2deg)}}
+#mobileHelp{display:none;position:absolute;right:18px;bottom:20px;font-size:11px;background:#102d4bd9;border:1px solid #fff8;border-radius:12px;padding:8px}
+@media(max-width:650px){.top{padding:10px}.logoIcon{width:38px;height:38px}.logo{font-size:13px}.logo small{font-size:8px}.stat{font-size:10px;padding:7px 8px}#progressOuter{top:62px;left:10px;right:10px}#mission{top:82px;left:10px;padding:10px 12px;width:min(270px,calc(100vw - 20px))}#missionTitle{font-size:16px}#missionText{font-size:11px}#controls{display:none}#mobileHelp{display:block}.answers{grid-template-columns:1fr}.card{padding:18px}.question p{font-size:15px}#prompt{bottom:15%;font-size:12px}}
+</style>
+</head>
+<body>
+<div id="game">
+ <div id="vignette"></div>
+ <header class="top">
+  <div class="logo"><div class="logoIcon">🧭</div><div>PEMBURU HARTA<small>EKSPEDISI KOORDINAT 3D</small></div></div>
+  <div class="stats"><div class="stat">⭐ <span id="score">0</span> mata</div><div class="stat">🗺️ <span id="done">0</span>/9 misi</div><div class="stat">💎 <span id="gems">0</span>/3 petunjuk</div></div>
+ </header>
+ <div id="progressOuter"><div id="progress"></div></div>
+ <div id="mission"><div class="eyebrow" id="chapter">BAB 1 · KAPAL</div><div id="missionTitle">Kapal Mutiara Laut</div><div id="missionText">Bergerak meneroka dunia 3D dan cari penanda misi.</div></div>
+ <div id="prompt"><kbd>E</kbd> Tekan untuk memulakan misi</div>
+ <div id="controls"><b>KAWALAN PELAYAR</b><br><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Bergerak<br><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Bergerak<br><kbd>E</kbd> Berinteraksi dengan penanda<br>Gerakkan tetikus untuk melihat sekeliling</div>
+ <div id="mobileHelp">Telefon: guna pad arah di bawah</div>
+ <div id="toast"></div>
+ <div id="modal"><div class="card"><div class="tag" id="modalTag">MISI 1 / 9</div><h2 id="modalTitle">Peta misteri</h2><p class="story" id="modalStory"></p><div class="question"><div class="tag">SOALAN KOORDINAT</div><p id="questionText"></p><div class="answers" id="answers"></div><div id="feedback"></div></div><div class="actions"><button class="btn secondary" onclick="closeQuiz()">Kembali ke dunia</button><button class="btn" id="continue" onclick="continueQuest()" disabled>Teruskan pengembaraan ➜</button></div></div></div>
+ <div id="intro"><div class="introCard"><div class="heroIcon">🏴‍☠️</div><h1>PEMBURU HARTA<br>KOORDINAT 3D</h1><p><b>Kapten Arif memerlukan bantuan kamu!</b><br>Jadilah pelayar, teroka kapal, jelajah pulau tropika dan masuk ke gua misteri. Bergerak sendiri dalam dunia 3D, cari penanda bercahaya dan jawab kesemua 9 misi koordinat untuk membuka peti harta karun.</p><div class="chips"><span>🎮 Dunia 3D boleh diteroka</span><span>🧭 Kawalan WASD</span><span>📚 Matematik Tahun 4</span><span>💎 9 misi</span></div><p><b>Petua koordinat:</b> baca paksi mengufuk (x) dahulu, kemudian paksi menegak (y).</p><button class="btn" onclick="startGame()">MULA PENGEMBARAAN ▶</button></div></div>
+ <div id="ending"><div class="endCard"><div class="chest">🏆💎</div><h2>HARTA KARUN DITEMUI!</h2><p id="endText"></p><p><b>Kapten Arif:</b> “Hebat, pelayar! Kamu berjaya membaca koordinat, menempuh cabaran dan menemukan harta karun. Ilmu ialah harta yang paling bernilai!”</p><button class="btn" onclick="restartGame()">MAIN SEMULA ↻</button></div></div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const $=id=>document.getElementById(id);
+const quests=[
+{zone:0,title:"Peta di Atas Kapal",chapter:"BAB 1 · PERMULAAN",story:"Kapten Arif membuka peta lama. “Sebelum kita belayar, kita mesti faham urutan koordinat. Nombor pertama ialah paksi mengufuk (x), nombor kedua ialah paksi menegak (y)!”",q:"Dalam koordinat (3, 2), nombor manakah menunjukkan paksi mengufuk?",a:["3","2","Kedua-duanya 2","Tiada nombor"],c:0,why:"Betul! Nombor pertama, 3, menunjukkan kedudukan pada paksi mengufuk (x)."},
+{zone:0,title:"Kotak Bekalan Kapten",chapter:"BAB 1 · PERMULAAN",story:"Di tepi layar ada kotak bekalan. “Bergerak ke kanan dahulu, kemudian ke atas,” pesan kapten sambil menunjukkan petak pada peta.",q:"Kamu bergerak 4 petak ke kanan dan 2 petak ke atas. Apakah koordinatnya?",a:["(2, 4)","(4, 2)","(4, 4)","(2, 2)"],c:1,why:"Tepat! Paksi mengufuk 4 dahulu, kemudian paksi menegak 2: (4, 2)."},
+{zone:0,title:"Kompas yang Hilang",chapter:"BAB 1 · PERMULAAN",story:"Kompas ajaib terjatuh di atas peta. Kamu perlu mentafsir koordinat supaya kapal menuju ke pulau yang betul.",q:"Apakah maksud koordinat (2, 4)?",a:["2 ke atas, 4 ke kanan","4 ke kanan, 2 ke atas","2 ke kanan, 4 ke atas","2 ke kiri, 4 ke bawah"],c:2,why:"Ya! (2, 4) bermaksud 2 unit ke kanan dan 4 unit ke atas dari titik mula."},
+{zone:1,title:"Jejak Tapak Kaki",chapter:"BAB 2 · PULAU MISTERI",story:"Kapal berlabuh di Pulau Kelapa. Tapak kaki membawa kamu ke pokok besar. Peta menunjukkan titik (3, 4).",q:"Untuk sampai ke titik (3, 4), berapa unit kamu bergerak ke kanan dahulu?",a:["4 unit","3 unit","7 unit","1 unit"],c:1,why:"Betul! Nombor pertama ialah 3, jadi bergerak 3 unit ke kanan."},
+{zone:1,title:"Pokok Kelapa Penanda",chapter:"BAB 2 · PULAU MISTERI",story:"Seekor burung kakak tua membawa cebisan peta. “Petunjuk seterusnya berada di lokasi (2, 3)!”",q:"Koordinat (2, 3) menunjukkan kedudukan…",a:["2 ke kanan, 3 ke atas","3 ke kanan, 2 ke atas","2 ke kiri, 3 ke atas","3 ke bawah, 2 ke kanan"],c:0,why:"Bagus! Bergerak 2 unit pada paksi mengufuk, kemudian 3 unit pada paksi menegak."},
+{zone:1,title:"Jambatan Kayu",chapter:"BAB 2 · PULAU MISTERI",story:"Jambatan kayu hanya akan terbuka jika kamu memilih koordinat dengan 4 pada paksi mengufuk dan 1 pada paksi menegak.",q:"Pilih koordinat yang betul.",a:["(1, 4)","(4, 1)","(4, 4)","(1, 1)"],c:1,why:"Tepat! (4, 1) menunjukkan 4 unit ke kanan dan 1 unit ke atas."},
+{zone:2,title:"Laluan Daun Lebat",chapter:"BAB 3 · HUTAN RAHSIA",story:"Di sebalik pulau, kamu menemui hutan tebal. Batu-batu disusun seperti grid. Cari pintu masuk gua dengan membaca koordinat.",q:"Jika titik A berada pada (1, 3), apakah nombor pada paksi menegak?",a:["1","3","4","2"],c:1,why:"Betul! Nombor kedua, 3, menunjukkan kedudukan pada paksi menegak (y)."},
+{zone:2,title:"Batu Bertanda X",chapter:"BAB 3 · HUTAN RAHSIA",story:"Satu batu mempunyai simbol X dan tulisan (4, 3). Sebut kedudukan itu mengikut urutan yang tepat untuk membuka laluan.",q:"Pilih penerangan yang betul bagi koordinat (4, 3).",a:["4 ke atas, 3 ke kanan","3 ke kanan, 4 ke atas","4 ke kanan, 3 ke atas","4 ke kiri, 3 ke bawah"],c:2,why:"Hebat! Koordinat dibaca mengufuk dahulu: 4 ke kanan, kemudian 3 ke atas."},
+{zone:3,title:"Pintu Gua Harta Karun",chapter:"BAB 4 · MISI TERAKHIR",story:"Akhirnya kamu tiba di gua gelap. Pintu batu hanya terbuka dengan jawapan yang tepat. Kapten Arif berbisik, “Ini misi terakhir. Buktikan kamu pemburu harta yang hebat!”",q:"Peti berada pada titik (3, 2). Apakah arah yang perlu diikuti dari titik mula?",a:["3 ke atas, kemudian 2 ke kanan","2 ke kanan, kemudian 3 ke atas","3 ke kanan, kemudian 2 ke atas","3 ke kiri, kemudian 2 ke bawah"],c:2,why:"Sempurna! (3, 2) bermaksud 3 unit ke kanan dan 2 unit ke atas. Pintu gua terbuka!"}];
+let score=0,done=new Set(),active=null,quizOpen=false,zone=0,gameStarted=false;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x75c8ec);scene.fog=new THREE.Fog(0x75c8ec,36,95);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,250);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;$("game").prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xc9f5ff,0x4c6239,2.0));const sun=new THREE.DirectionalLight(0xffefca,3.1);sun.position.set(-20,35,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-50;sun.shadow.camera.right=50;sun.shadow.camera.top=50;sun.shadow.camera.bottom=-50;scene.add(sun);
+const mat=(color,roughness=.85)=>new THREE.MeshStandardMaterial({color,roughness});
+const mats={grass:mat(0x62bd69),sand:mat(0xf0d18a),wood:mat(0x96572e),wood2:mat(0xc78543),darkwood:mat(0x4b3025),water:mat(0x258cc5,.38),leaf:mat(0x238353),leaf2:mat(0x46ae5e),rock:mat(0x788b8f),stone:mat(0x384c5f),gold:mat(0xffc947,.35),red:mat(0xe85e4c),blue:mat(0x2e5f8e),skin:mat(0xe7b17e),black:mat(0x302d38),white:mat(0xfff0cb),cyan:mat(0x5df4dc,.3)};
+function box(parent,x,y,z,w,h,d,material,opts={}){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.castShadow=opts.cast!==false;m.receiveShadow=true;parent.add(m);return m}
+function cyl(parent,x,y,z,rt,rb,h,material,seg=8){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
+function sphere(parent,x,y,z,r,material,seg=10){const m=new THREE.Mesh(new THREE.SphereGeometry(r,seg,seg),material);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m}
+function cone(parent,x,y,z,r,h,material,seg=7){const m=new THREE.Mesh(new THREE.ConeGeometry(r,h,seg),material);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m}
+function group(parent,x=0,y=0,z=0){const g=new THREE.Group();g.position.set(x,y,z);parent.add(g);return g}
+const zones=[];
+function waterWorld(){const w=new THREE.Mesh(new THREE.PlaneGeometry(240,240),mats.water);w.rotation.x=-Math.PI/2;w.position.y=-.65;w.receiveShadow=true;scene.add(w);for(let i=0;i<30;i++){const wave=new THREE.Mesh(new THREE.TorusGeometry(.5+Math.random()*1.2,.025,4,18),mat(0x7ce4ed,.4));wave.rotation.x=Math.PI/2;wave.position.set((Math.random()-.5)*100,-.55,(Math.random()-.5)*100);scene.add(wave)}}
+waterWorld();
+function makePalm(parent,x,z,s=1){const g=group(parent,x,0,z);const trunk=cyl(g,0,1.5*s,0,.18*s,.25*s,3*s,mats.wood,7);trunk.rotation.z=-.13;for(let i=0;i<6;i++){const a=i*Math.PI/3;const f=cone(g,Math.sin(a)*.9*s,3*s+Math.cos(a)*.1*s,Math.cos(a)*.9*s,.35*s,2.1*s,i%2?mats.leaf:mats.leaf2,5);f.rotation.z=Math.cos(a)*.8;f.rotation.x=Math.sin(a)*.7}return g}
+function makeRock(parent,x,y,z,s=1){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),mats.rock);r.position.set(x,y,z);r.rotation.set(Math.random(),Math.random(),Math.random());r.castShadow=true;parent.add(r);return r}
+function makeIsland(x,z,radius,kind){const g=group(scene,x,0,z);const beach=new THREE.Mesh(new THREE.CylinderGeometry(radius*.88,radius,radius*.28,12),mats.sand);beach.position.y=-.25;beach.scale.z=.83;beach.receiveShadow=true;g.add(beach);const top=new THREE.Mesh(new THREE.CylinderGeometry(radius*.75,radius*.88,radius*.23,12),kind===2?mats.grass:mats.grass);top.position.y=-.04;top.scale.z=.83;top.receiveShadow=true;g.add(top);if(kind===1){for(const [px,pz,s] of [[-4,-2,1.1],[4,-3,.85],[-5,3,.8],[5,2,1]])makePalm(g,px,pz,s);for(let i=0;i<9;i++)makeRock(g,(Math.random()-.5)*radius*1.3,.4,(Math.random()-.5)*radius*.95,.35+Math.random()*.6)}if(kind===2){for(let i=0;i<14;i++){let px=(Math.random()-.5)*radius*1.5,pz=(Math.random()-.5)*radius*1.1;makePalm(g,px,pz,.7+Math.random()*.7)}for(let i=0;i<8;i++)makeRock(g,(Math.random()-.5)*radius*1.2,.5,(Math.random()-.5)*radius,.4+Math.random()*.4)}return g}
+const ship=group(scene,0,0,0);
+function makeShip(){// tapered-looking hull from planks and rails
+const hull=new THREE.Mesh(new THREE.CylinderGeometry(2.9,4.2,1.3,8,1,false),mats.wood);hull.scale.set(1.9,1,1);hull.rotation.y=Math.PI/8;hull.position.set(0,.2,0);hull.castShadow=true;ship.add(hull);
+box(ship,0,.9,0,9,.3,4.8,mats.wood2);for(let i=0;i<10;i++)box(ship,-4.3+i*.95,1.15,-2.25,.12,.35,.15,mats.darkwood);
+for(let x of [-4.1,4.1])for(let z of [-2,2])cyl(ship,x,1.25,z,.12,.12,.9,mats.wood,6);
+box(ship,0,1.45,2.05,8.4,.18,.18,mats.wood);box(ship,0,1.45,-2.05,8.4,.18,.18,mats.wood);
+cyl(ship,-.4,4,0,.16,.19,5.3,mats.wood,8);const sail=new THREE.Mesh(new THREE.PlaneGeometry(3.6,3.3),mats.white);sail.position.set(-.35,4.15,.08);sail.rotation.y=.12;ship.add(sail);const sail2=new THREE.Mesh(new THREE.PlaneGeometry(2.6,2.4),mats.white);sail2.position.set(1.8,3.7,.08);ship.add(sail2);box(ship,-.4,6.75,0,1.1,.18,.15,mats.red);for(let i=0;i<3;i++)box(ship,-2.6+i*.9,1.4,.3,.65,.5,.65,mats.wood2);
+}
+makeShip();
+const island=makeIsland(22,0,12,1);const jungle=makeIsland(39,-4,10,2);const caveIsland=makeIsland(56,1,12,2);
+function makeCave(){const g=group(scene,56,0,1);const cliff= new THREE.Mesh(new THREE.DodecahedronGeometry(7,1),mats.stone);cliff.position.set(0,2,-3);cliff.scale.set(1.5,1.15,.75);cliff.castShadow=true;g.add(cliff);const mouth=new THREE.Mesh(new THREE.CircleGeometry(2.8,24),mat(0x020914));mouth.position.set(0,1.9,-.1);mouth.scale.y=1.35;mouth.castShadow=false;g.add(mouth);for(let i=0;i<4;i++){const s=cone(g,-3.7+i*2.5,2.3+(i%2)*.5,1.3,.6,2,mats.rock,5);s.rotation.z=(i%2?.3:-.2)}for(let x of [-3.7,3.7]){cyl(g,x,2.4,1.6,.11,.11,1.2,mats.wood,6);cone(g,x,3.25,1.6,.35,.85,mat(0xff9b32,.4),6);sphere(g,x,3.4,1.6,.2,mat(0xffd26a,.25))}return g}
+makeCave();
+function makeDock(){const d=group(scene,9,0,0);for(let i=0;i<7;i++)box(d,i*.85,0,0,.82,.28,3,mats.wood2);for(let x of [-.1,5.9])for(let z of [-1,1])cyl(d,x,-.55,z,.12,.12,1.2,mats.wood,6)}
+makeDock();
+const player=group(scene,0,0,5);const body=group(player,0,0,0);
+box(body,0,1.55,0,.8,.8,.45,mats.red);box(body,0,1.1,0,.88,.12,.48,mats.gold);box(body,0,2.18,0,.65,.58,.6,mats.skin);box(body,0,2.48,0,.72,.2,.68,mats.black);box(body,0,2.33,-.03,.76,.16,.68,mats.black);box(body,-.16,2.2,.31,.07,.08,.035,mats.black);box(body,.16,2.2,.31,.07,.08,.035,mats.black);
+const armL=group(body,-.53,1.78,0);box(armL,0,-.25,0,.24,.62,.28,mats.skin);const armR=group(body,.53,1.78,0);box(armR,0,-.25,0,.24,.62,.28,mats.skin);
+const legL=group(body,-.22,.8,0);box(legL,0,-.23,0,.3,.55,.34,mats.blue);const legR=group(body,.22,.8,0);box(legR,0,-.23,0,.3,.55,.34,mats.blue);
+const playerShadow=new THREE.Mesh(new THREE.CircleGeometry(.55,16),new THREE.MeshBasicMaterial({color:0x15324a,transparent:true,opacity:.24}));playerShadow.rotation.x=-Math.PI/2;playerShadow.position.y=.03;player.add(playerShadow);
+const markers=[];
+function makeMarker(q,i,x,z){const g=group(scene,x,0,z);const ring=new THREE.Mesh(new THREE.TorusGeometry(.75,.09,8,24),new THREE.MeshStandardMaterial({color:0xffd04e,emissive:0x7c3e00,emissiveIntensity:.8,roughness:.3}));ring.rotation.x=Math.PI/2;ring.position.y=.12;g.add(ring);const orb=sphere(g,0,1.7,0,.38,mats.gold);const halo=new THREE.PointLight(0xffc84e,1.5,5);halo.position.y=1.7;g.add(halo);const label=makeLabel(i+1);label.position.set(0,2.7,0);g.add(label);g.userData={quest:i,ring,orb,halo};markers.push(g);return g}
+function makeLabel(n){const c=document.createElement('canvas');c.width=128;c.height=64;const ctx=c.getContext('2d');ctx.fillStyle='#102743';ctx.strokeStyle='#fff0b5';ctx.lineWidth=6;roundRect(ctx,5,5,118,54,18);ctx.fill();ctx.stroke();ctx.fillStyle='#fff3c4';ctx.font='900 30px Nunito, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('MISI '+n,64,32);const tex=new THREE.CanvasTexture(c);const m=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));m.scale.set(2.2,1.1,1);return m}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+const positions=[
+[-1,1.3], [2, -1.2],[4,1.1],
+[20,0],[23,-3],[26,2],
+[38,-3],[41,0],
+[56,2]
+];
+quests.forEach((q,i)=>{const [x,z]=positions[i];makeMarker(q,i,x,z)});
+function addDecor(){// islands' props and landmarks
+const palm=makePalm(scene,17,-4,1.2);const palm2=makePalm(scene,28,4,1.1);
+for(let i=0;i<12;i++){const x=34+Math.random()*10,z=-8+Math.random()*9;const trunk=cyl(scene,x,.8,z,.18,.22,1.6,mats.wood,6);cone(scene,x,2,z,.9,2,mats.leaf,6)}
+// bridge between island and jungle
+for(let i=0;i<7;i++){box(scene,29+i*.85,.05,-1.2,.78,.2,1.8,mats.wood2);for(let z of [-2, -.4])cyl(scene,29+i*.85,-.28,z,.06,.06,.7,mats.wood,5)}
+// treasure chest near cave
+const chest=group(scene,60,.2,4);box(chest,0,.45,0,1.4,.85,1,mats.wood);box(chest,0,.92,0,1.42,.2,1.03,mats.gold);box(chest,0,.52,.53,.18,.5,.05,mats.gold);box(chest,0,.8,.57,.3,.24,.08,mats.gold);
+}
+addDecor();
+const obstacles=[]; // soft land bounds, ocean crossing is permitted as an adventure route
+let yaw=0,pitch=.15,keys={},nearest=null,mouseDown=false,lastX=0,lastY=0,moveSpeed=8,animT=0;
+camera.position.set(0,5,11);
+function updateHUD(){const q=quests[done.size]||quests[8];$('score').textContent=score;$('done').textContent=done.size;$('gems').textContent=Math.floor(done.size/3);$('progress').style.width=(done.size/quests.length*100)+'%';if(q){$('chapter').textContent=q.chapter;$('missionTitle').textContent=done.has(done.size)?'Misi selesai':q.title;$('missionText').textContent=done.size===9?'Semua misi selesai!':`Cari penanda bercahaya ${done.size+1}/9 dan tekan E untuk berinteraksi.`}}
+function toast(t){$('toast').textContent=t;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',1600)}
+function openQuiz(i){if(done.has(i)||quizOpen)return;active=i;quizOpen=true;const q=quests[i];$('modalTag').textContent=`MISI ${i+1} / ${quests.length} · ${q.chapter}`;$('modalTitle').textContent=q.title;$('modalStory').textContent=q.story;$('questionText').textContent=q.q;$('feedback').textContent='';$('continue').disabled=true;$('answers').innerHTML='';q.a.forEach((a,j)=>{const b=document.createElement('button');b.className='answer';b.textContent=String.fromCharCode(65+j)+'. '+a;b.onclick=()=>answer(j,b);$('answers').appendChild(b)});$('modal').style.display='flex';$('prompt').style.display='none'}
+function answer(j,b){const q=quests[active];const btns=[...document.querySelectorAll('.answer')];if($('continue').disabled===false)return;if(j===q.c){b.classList.add('good');btns.forEach(x=>x.disabled=true);$('feedback').style.color='#218346';$('feedback').textContent='✅ '+q.why+' +10 markah!';score+=10;done.add(active);$('continue').disabled=false;updateHUD();const m=markers[active];m.visible=false;toast('Misi berjaya! +10 mata ⭐');}else{b.classList.add('bad');$('feedback').style.color='#b23b2a';$('feedback').textContent='❌ Belum tepat. Cuba lagi! Petunjuk: baca paksi mengufuk (x) dahulu.';setTimeout(()=>b.classList.remove('bad'),750)}}
+function closeQuiz(){quizOpen=false;$('modal').style.display='none'}
+function continueQuest(){closeQuiz();if(done.size===9){$('ending').style.display='flex';$('endText').textContent=`Kamu menyelesaikan semua 9 misi dan memperoleh ${score} daripada 90 markah. Hebat, pelayar!`;return}const next=quests.findIndex((q,i)=>!done.has(i));if(next>=0){const p=markers[next].position;player.position.x=p.x-2;player.position.z=p.z+2;zone=quests[next].zone;toast('Penanda misi seterusnya telah ditemui!')}updateHUD()}
+function startGame(){gameStarted=true;$('intro').style.display='none';player.position.set(0,0,5);yaw=0;updateHUD();toast('Teroka dunia 3D! Cari penanda MISI 1')}
+function restartGame(){score=0;done.clear();markers.forEach(m=>m.visible=true);$('ending').style.display='none';$('intro').style.display='flex';player.position.set(0,0,5);yaw=0;updateHUD()}
+function closeEnough(){let best=null,dist=Infinity;markers.forEach((m,i)=>{if(done.has(i))return;const d=Math.hypot(player.position.x-m.position.x,player.position.z-m.position.z);if(d<dist){dist=d;best=i}});return dist<3.4?best:null}
+window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key.toLowerCase()==='e'&&nearest!==null&&!quizOpen)openQuiz(nearest);if(e.key==='Escape'&&quizOpen)closeQuiz()});
+window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+renderer.domElement.addEventListener('pointerdown',e=>{mouseDown=true;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture?.(e.pointerId)});
+window.addEventListener('pointerup',()=>mouseDown=false);
+window.addEventListener('pointermove',e=>{if(mouseDown&&!quizOpen&&gameStarted){yaw-=(e.clientX-lastX)*.004;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-lastY)*.002,-.2,.6)}lastX=e.clientX;lastY=e.clientY});
+renderer.domElement.addEventListener('wheel',e=>{camera.userData.distance=THREE.MathUtils.clamp((camera.userData.distance||8)+e.deltaY*.008,5,13)});
+function update(dt){animT+=dt;
+markers.forEach((m,i)=>{if(m.visible){m.userData.orb.position.y=1.65+Math.sin(animT*2.5+i)*.18;m.userData.ring.rotation.z=animT*.45;m.userData.halo.intensity=1.2+Math.sin(animT*3+i)*.35}});
+if(gameStarted&&!quizOpen){let f=0,s=0;if(keys.w||keys.arrowup)f=1;if(keys.s||keys.arrowdown)f=-1;if(keys.a||keys.arrowleft)s=-1;if(keys.d||keys.arrowright)s=1;const mag=Math.hypot(f,s)||1;f/=mag;s/=mag;const dir=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));player.position.addScaledVector(dir,-f*moveSpeed*dt);player.position.addScaledVector(right,s*moveSpeed*dt);player.position.y=0;if(f||s){body.position.y=Math.abs(Math.sin(animT*11))*.07;armL.rotation.x=Math.sin(animT*11)*.45;armR.rotation.x=-Math.sin(animT*11)*.45;legL.rotation.x=-Math.sin(animT*11)*.5;legR.rotation.x=Math.sin(animT*11)*.5;player.rotation.y=Math.atan2(s*right.x-f*dir.x,s*right.z-f*dir.z)}else{body.position.y=0;armL.rotation.x=armR.rotation.x=legL.rotation.x=legR.rotation.x=0}}
+nearest=gameStarted&&!quizOpen?closeEnough():null;
+if(nearest!==null){$('prompt').style.display='block';$('prompt').innerHTML=`<kbd>E</kbd> Tekan untuk memulakan: ${quests[nearest].title}`}else $('prompt').style.display='none';
+const distance=camera.userData.distance||8;const target=new THREE.Vector3(player.position.x,player.position.y+1.3,player.position.z);const camOffset=new THREE.Vector3(Math.sin(yaw)*distance,3.3+pitch*3,Math.cos(yaw)*distance);camera.position.lerp(target.clone().add(camOffset),1-Math.pow(.001,dt));camera.lookAt(target);
+}
+let prev=performance.now();function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-prev)/1000,.05);prev=now;update(dt);renderer.render(scene,camera)}requestAnimationFrame(loop);
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8))});
+// On touch screens, simple on-screen directional pad
+if('ontouchstart' in window){const pad=document.createElement('div');pad.style.cssText='position:absolute;right:16px;bottom:18px;display:grid;grid-template-columns:44px 44px 44px;gap:4px;z-index:3';[['',''],['↑','w'],['',''],['←','a'],['↓','s'],['→','d']].forEach(([label,key])=>{const b=document.createElement('button');b.textContent=label;b.style.cssText='height:42px;border-radius:10px;border:2px solid #fff2c5;background:#102d4be8;color:white;font-size:19px;font-weight:900';if(!key)b.style.visibility='hidden';else{b.addEventListener('touchstart',e=>{e.preventDefault();keys[key]=true},{passive:false});b.addEventListener('touchend',e=>{e.preventDefault();keys[key]=false},{passive:false});b.addEventListener('touchcancel',()=>keys[key]=false)}pad.appendChild(b)});$('game').appendChild(pad);const ebtn=document.createElement('button');ebtn.textContent='E · MISI';ebtn.style.cssText='position:absolute;right:22px;bottom:166px;z-index:3;border:2px solid #fff2c5;border-radius:12px;background:#ffcf52;color:#18344f;padding:11px;font-weight:1000';ebtn.onclick=()=>{if(nearest!==null)openQuiz(nearest)};$('game').appendChild(ebtn)}
+updateHUD();
+</script>
+</body>
+</html>
